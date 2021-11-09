@@ -1,17 +1,57 @@
 #include "spimcore.h"
+/*
+NOTES TO ME
 
+1. Look over reading and writing to memory. It could be that an older process isint working exactly too, so
+2. I dont think branch is working either, look at how branch works
+3. Cover addidion and subtraction overflow.
+
+
+*/
 
 /* ALU */
 /* 10 Points */
 void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero)
 {
-	if(ALUControl == 0)
+	if(ALUControl == 0)//TODO: need to cover overflow :)
 	{
-			*ALUresult = (A + B);
+		unsigned aHold = A;
+		unsigned bHold = B;
+
+		if((aHold & 0b10000000000000000000000000000000)>>31)
+		{
+			aHold = ~aHold + 1;
+		}
+		if((bHold & 0b10000000000000000000000000000000)>>31)
+		{
+			bHold = ~bHold + 1;
+		}
+		*ALUresult = (aHold + bHold);
+		if((*ALUresult & 0b10000000000000000000000000000000)>>31)
+		{
+			*ALUresult = ~*ALUresult + 1;//back to twos comp
+		}
+		fprintf(stdout,"alu result for addi: %d",*ALUresult);
 	}
-	else if(ALUControl == 1)
+	else if(ALUControl == 1)//TODO: cover overflow
 	{
-			*ALUresult = (A - B);
+		unsigned aHold = A;
+		unsigned bHold = B;
+
+		if((aHold & 0b10000000000000000000000000000000)>>31)
+		{
+			aHold = ~aHold + 1;
+		}
+		if((bHold & 0b10000000000000000000000000000000)>>31)
+		{
+			bHold = ~bHold + 1;
+		}
+		*ALUresult = (aHold - bHold);
+		if((*ALUresult & 0b10000000000000000000000000000000)>>31)
+		{
+			*ALUresult = ~*ALUresult + 1;//back to twos comp
+		}
+	
 	}
 	else if(ALUControl == 2)//signed version
 	{
@@ -70,7 +110,6 @@ void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero)
 
 /* instruction fetch */
 /* 10 Points */
-//problem here :(
 int instruction_fetch(unsigned PC,unsigned *Mem,unsigned *instruction)
 {
 	if(PC % 4 != 0){
@@ -104,6 +143,7 @@ void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1,unsi
 
 /* instruction decode */
 /* 15 Points */
+//check here for some errors 
 int instruction_decode(unsigned op,struct_controls *controls)
 {
 		unsigned firstThree = op & 000111;
@@ -122,6 +162,7 @@ int instruction_decode(unsigned op,struct_controls *controls)
 			controls->RegWrite=1;
 			return 0;
 		}
+		//TODO: dont think everything is a 2
 		if(firstThree == 0 && lastThree == 2){
 			//jump
 			controls->RegDst=2;
@@ -179,6 +220,7 @@ int instruction_decode(unsigned op,struct_controls *controls)
 				controls->RegWrite=0;
 				return 0;
 			}
+			//this needs work
 			else if(lastThree == 7)
 			{
 				//load upper immediate TODO
@@ -219,6 +261,7 @@ int instruction_decode(unsigned op,struct_controls *controls)
 
 /* Read Register */
 /* 5 Points */
+//TODO: check is working
 void read_register(unsigned r1,unsigned r2,unsigned *Reg,unsigned *data1,unsigned *data2)
 {
 	data1 = &Reg[r1];
@@ -228,6 +271,7 @@ void read_register(unsigned r1,unsigned r2,unsigned *Reg,unsigned *data1,unsigne
 
 /* Sign Extend */
 /* 10 Points */
+//TODO: check if working
 void sign_extend(unsigned offset,unsigned *extended_value)
 {
 	if((*extended_value & 0b00000000000000001000000000000000)>>15)//so if the sign bit is one this will run, otherwise no go
@@ -241,17 +285,64 @@ void sign_extend(unsigned offset,unsigned *extended_value)
 int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigned funct,char ALUOp,char ALUSrc,unsigned *ALUresult,char *Zero)
 {
 	if(ALUOp==0b111){
-		//do things with the func (its an R type)
+		//its an r type
+		unsigned upperHalf = (funct & 0b111000)>>3;
+		unsigned lowerHalf = funct & 0b000111;
+
+		if(upperHalf == 0b100){
+
+				if(lowerHalf == 0b0){
+					//add
+					ALUOp = 0b000;
+				}	
+				if(lowerHalf == 0b10){
+					//sub
+					ALUOp = 0b001;
+				}
+				if(lowerHalf == 0b100){
+					//and
+					ALUOp = 0b100;
+				}
+				if(lowerHalf == 0b101){
+					//or
+					ALUOp = 0b101;
+				}
+		}
+		else if(upperHalf == 0b101){
+			if(lowerHalf == 0b010){
+					//sub
+					ALUOp = 0b010;
+				}
+			if(lowerHalf == 0b011){
+					//sub
+					ALUOp = 0b011;
+				}
+		}
+		else{
+			return 1;
+		}
+	}
+	//TODO: missing one thing, a check whether im using extended or data
+	if(ALUSrc == 0b0){
+		ALU(data1,data2,ALUOp,ALUresult,Zero);
+	}
+	else if(ALUSrc == 0b1){
+		ALU(data1,extended_value,ALUOp,ALUresult,Zero);
+	}
+	else if(ALUSrc != 0b10){
+		return 1;
 	}
 
-	 ALU(data1,data2,ALUOp,ALUresult,Zero);
+	return 0;
+	 
 }
 
 /* Read / Write Memory */
 /* 10 Points */
+//TODO: READ WHAT PROF SAID TO YOU
 int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsigned *memdata,unsigned *Mem)
 {
-	if(*Mem%4!=0){
+	if(*Mem%4!=0 && (MemWrite||MemRead)){
 		return 0b1;
 	}
 
@@ -268,6 +359,7 @@ int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsig
 
 /* Write Register */
 /* 10 Points */
+//TODO: READ WHAT PROF SAID TO YOU
 void write_register(unsigned r2,unsigned r3,unsigned memdata,unsigned ALUresult,char RegWrite,char RegDst,char MemtoReg,unsigned *Reg)
 {
 	if(RegWrite == 0){
@@ -285,8 +377,10 @@ void write_register(unsigned r2,unsigned r3,unsigned memdata,unsigned ALUresult,
 
 /* PC update */
 /* 10 Points */
+//TODO: CHECK WHAT PROF SAID TO YOU :))
 void PC_update(unsigned jsec,unsigned extended_value,char Branch,char Jump,char Zero,unsigned *PC)
 {
+	
 	PC +=4;
 
 	if(Branch){
@@ -295,7 +389,7 @@ void PC_update(unsigned jsec,unsigned extended_value,char Branch,char Jump,char 
 		}
 	}
 	if(Jump){//might be wrong idk :C
-			PC += (*PC & 0b11110000000000000000000000000000)+(jsec<<2);
+			PC += (*PC & 0b11110000000000000000000000000000)&(jsec<<2);
 	}
 }
 
