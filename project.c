@@ -70,13 +70,14 @@ void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero)
 
 /* instruction fetch */
 /* 10 Points */
+//problem here :(
 int instruction_fetch(unsigned PC,unsigned *Mem,unsigned *instruction)
 {
 	if(PC % 4 != 0){
 		return 1;//makes halt 1 lolll
 	} 
 	else{
-		*instruction = Mem[MEM(PC)];
+		instruction = &Mem[MEM(PC)];
 		return 0;
 	}
 
@@ -109,36 +110,111 @@ int instruction_decode(unsigned op,struct_controls *controls)
 		unsigned lastThree = (op & 111000) >>3;
 
 		if(op == 0){
-			//means it an r type, this is big sad
+			//r type
+			controls->RegDst=1;
+			controls->Jump=0;
+			controls->Branch=0;
+			controls->MemRead=0;
+			controls->MemtoReg=0;
+			controls->ALUOp=0b111;
+			controls->MemWrite =0;
+			controls->ALUSrc=0;
+			controls->RegWrite=1;
+			return 0;
 		}
 		if(firstThree == 0 && lastThree == 2){
 			//jump
+			controls->RegDst=2;
+			controls->Jump= 1;
+			controls->Branch=2;
+			controls->MemRead=2;
+			controls->MemtoReg=2;
+			controls->ALUOp=0;
+			controls->MemWrite =2;
+			controls->ALUSrc=2;
+			controls->RegWrite=2;
+			return 0;
+
 		}
 		if(firstThree == 0 && lastThree == 4){
 			//beq
+			controls->RegDst=2;
+			controls->Jump= 0;
+			controls->Branch=1;
+			controls->MemRead=0;
+			controls->MemtoReg=2;
+			controls->ALUOp=0;//means dont care
+			controls->MemWrite =0;
+			controls->ALUSrc=0;
+			controls->RegWrite=0;
+			return 0;
 		}
-		if(firstThree == 0 && lastThree == 5){
-			//bne
+		if(firstThree == 1){
+			//i type
+			controls->RegDst=0;
+			controls->Jump= 0;
+			controls->Branch=0;
+			controls->MemRead=0;
+			controls->MemtoReg=0;
+			controls->MemWrite =0;
+			controls->ALUSrc=1;
+			controls->RegWrite=1;
+
+			if(lastThree == 0){
+				//addi
+				controls->ALUOp=0;
+				return 0;
+			}
+			else if(lastThree == 2)
+			{
+				//slti signed
+				controls->ALUOp=0b010;
+				controls->RegWrite=0;
+				return 0;
+			}
+			else if(lastThree == 3)
+			{
+				//slti unsigned
+				controls->ALUOp=0b011;
+				controls->RegWrite=0;
+				return 0;
+			}
+			else if(lastThree == 7)
+			{
+				//load upper immediate TODO
+				controls->ALUOp=0b110;
+				return 0;
+			}
+			
 		}
-		if(firstThree == 1 && lastThree == 0){
-			//addi
-		}
-		if(firstThree == 1 && lastThree == 2){
-			//slti
-		}
-		if(firstThree == 1 && lastThree == 4){
-			//andi
-		}
-		if(firstThree == 1 && lastThree == 5){
-			//ori
-		}
+		
 		if(firstThree == 4 && lastThree == 3){
 			//lw
+			controls->RegDst=0;
+			controls->Jump= 0;
+			controls->Branch=0;
+			controls->MemRead=1;
+			controls->MemtoReg=1;
+			controls->ALUOp=0;//lw adds registers
+			controls->MemWrite =0;
+			controls->ALUSrc=1;
+			controls->RegWrite=1;
+			return 0;
 		}
 		if(firstThree == 5 && lastThree == 3){
 			//sw
+			controls->RegDst=1;
+			controls->Jump= 0;
+			controls->Branch=0;
+			controls->MemRead=0;
+			controls->MemtoReg=0;
+			controls->ALUOp=0;
+			controls->MemWrite =1;
+			controls->ALUSrc=1;
+			controls->RegWrite=0;
+			return 0;
 		}
-
+		return 1;
 }
 
 /* Read Register */
@@ -164,7 +240,9 @@ void sign_extend(unsigned offset,unsigned *extended_value)
 /* 10 Points */
 int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigned funct,char ALUOp,char ALUSrc,unsigned *ALUresult,char *Zero)
 {
-
+	if(ALUOp==0b111){
+		//do things with the func (its an R type)
+	}
 
 	 ALU(data1,data2,ALUOp,ALUresult,Zero);
 }

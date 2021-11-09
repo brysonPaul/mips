@@ -106,16 +106,18 @@ void DisplayControlSignals(void)
 
 void Step(void)
 {
+		fprintf(stdout,"start");
 	/* fetch instruction from memory */
 	Halt = instruction_fetch(PC,Mem,&instruction);
-
+	fprintf(stdout,"We got here");
 	if(!Halt)
 	{
 		/* partition the instruction */
 		instruction_partition(instruction,&op,&r1,&r2,&r3,&funct,&offset,&jsec);
-
+			fprintf(stdout,"passed partition %d", Halt);
 		/* instruction decode */
 		Halt = instruction_decode(op,&controls);
+			fprintf(stdout,"passed decode %d", Halt);
 	}
 
 	if(!Halt)
