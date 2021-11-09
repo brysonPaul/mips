@@ -18,11 +18,11 @@ void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero)
 		unsigned aHold = A;
 		unsigned bHold = B;
 
-		if(aHold & 0b10000000000000000000000000000000)
+		if((aHold & 0b10000000000000000000000000000000)>>31)
 		{
 			aHold = ~aHold + 1;
 		}
-		if(bHold & 0b10000000000000000000000000000000)
+		if((bHold & 0b10000000000000000000000000000000)>>31)
 		{
 			bHold = ~bHold + 1;
 		}
@@ -105,14 +105,48 @@ void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1,unsi
 /* 15 Points */
 int instruction_decode(unsigned op,struct_controls *controls)
 {
-	controls->RegWrite=5;	
+		unsigned firstThree = op & 000111;
+		unsigned lastThree = (op & 111000) >>3;
+
+		if(op == 0){
+			//means it an r type, this is big sad
+		}
+		if(firstThree == 0 && lastThree == 2){
+			//jump
+		}
+		if(firstThree == 0 && lastThree == 4){
+			//beq
+		}
+		if(firstThree == 0 && lastThree == 5){
+			//bne
+		}
+		if(firstThree == 1 && lastThree == 0){
+			//addi
+		}
+		if(firstThree == 1 && lastThree == 2){
+			//slti
+		}
+		if(firstThree == 1 && lastThree == 4){
+			//andi
+		}
+		if(firstThree == 1 && lastThree == 5){
+			//ori
+		}
+		if(firstThree == 4 && lastThree == 3){
+			//lw
+		}
+		if(firstThree == 5 && lastThree == 3){
+			//sw
+		}
+
 }
 
 /* Read Register */
 /* 5 Points */
 void read_register(unsigned r1,unsigned r2,unsigned *Reg,unsigned *data1,unsigned *data2)
 {
-
+	data1 = &Reg[r1];
+	data2 = &Reg[r2];
 }
 
 
@@ -144,7 +178,7 @@ int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsig
 	}
 
 	if(MemWrite==0b1){
-		MEM(*Mem)=data2;//might be wrong, ask prof
+		Mem[0]=data2;//might be wrong, ask prof
 	}
 	if(MemRead==0b1){
 		*memdata = MEM(*Mem);
@@ -179,7 +213,7 @@ void PC_update(unsigned jsec,unsigned extended_value,char Branch,char Jump,char 
 
 	if(Branch){
 		if(!Zero){
-			PC += 4* (jsec & 0b00000000001111111111111111);
+			PC += 4 * (jsec & 0b00000000001111111111111111);
 		}
 	}
 	if(Jump){//might be wrong idk :C
