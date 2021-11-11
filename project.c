@@ -1,12 +1,9 @@
 #include "spimcore.h"
 /*
 NOTES TO ME
-
-1. Look over reading and writing to memory. It could be that an older process isint working exactly too, so
-2. I dont think branch is working either, look at how branch works
-3. Cover addidion and subtraction overflow.
-
-
+1. cover addition and subtraction overflow
+2. make all numbers in binary
+3. remove all prints
 */
 
 /* ALU */
@@ -17,67 +14,44 @@ void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero)
 	{
 		unsigned aHold = A;
 		unsigned bHold = B;
-
-		if((aHold & 0b10000000000000000000000000000000)>>31)
-		{
-			aHold = ~aHold + 1;
-		}
-		if((bHold & 0b10000000000000000000000000000000)>>31)
-		{
-			bHold = ~bHold + 1;
-		}
 		*ALUresult = (aHold + bHold);
-		if((*ALUresult & 0b10000000000000000000000000000000)>>31)
-		{
-			*ALUresult = ~*ALUresult + 1;//back to twos comp
-		}
 	}
 	else if(ALUControl == 1)//TODO: cover overflow
 	{
 		unsigned aHold = A;
 		unsigned bHold = B;
-
-		if((aHold & 0b10000000000000000000000000000000)>>31)
-		{
-			aHold = ~aHold + 1;
-		}
-		if((bHold & 0b10000000000000000000000000000000)>>31)
-		{
-			bHold = ~bHold + 1;
-		}
 		*ALUresult = (aHold - bHold);
-		if((*ALUresult & 0b10000000000000000000000000000000)>>31)
-		{
-			*ALUresult = ~*ALUresult + 1;//back to twos comp
-		}
-	
 	}
-	else if(ALUControl == 2)//signed version
-	{
-		unsigned aHold = A;
-		unsigned bHold = B;
-
-		if((aHold & 0b10000000000000000000000000000000)>>31)
-		{
-			aHold = ~aHold + 1;
-		}
-		if((bHold & 0b10000000000000000000000000000000)>>31)
-		{
-			bHold = ~bHold + 1;
-		}
-			int hold = aHold-bHold;
-			if(hold<0){
-				*ALUresult = 1;
-			}
-			else ALUresult = 0;
-	}
-	else if(ALUControl == 3)//unsigned
+	else if(ALUControl == 2)//signed version as the values come in ALREADY SIGNED
 	{
 			int hold = A-B;
 			if(hold<0){
 				*ALUresult = 1;
 			}
-			else ALUresult = 0;
+			else *ALUresult = 0;
+	}
+	else if(ALUControl == 3)//unsigned version, takes a signed val and takes it out of twos comp
+	{
+		fprintf(stdout,"IN SLT IN ALU \n");
+		unsigned aHold = A;
+		unsigned bHold = B;
+
+		fprintf(stdout,"a and b: %d\t%d\n",aHold,bHold);
+		if((aHold & 0b10000000000000000000000000000000)>>31 == 0b1)
+		{
+			aHold = ~aHold + 1;
+			fprintf(stdout,"a: %d\n",aHold);
+		}
+		if((bHold & 0b10000000000000000000000000000000)>>31 == 0b1)
+		{
+			bHold = ~bHold + 1;
+			fprintf(stdout,"b: %d\n",bHold);
+		}
+			int hold = aHold-bHold;
+			if(hold<0){
+				*ALUresult = 1;
+			}
+			else *ALUresult = 0;
 	}
 	else if(ALUControl == 4)
 	{
@@ -172,15 +146,15 @@ int instruction_decode(unsigned op,struct_controls *controls)
 		else if(firstThree == 0 && lastThree == 2){
 			fprintf(stdout,"j\n");
 			//jump
-			controls->RegDst=2;
-			controls->Jump= 1;
-			controls->Branch=2;
-			controls->MemRead=2;
+			controls->RegDst=2;//ood
+			controls->Jump= 1;//good
+			controls->Branch=0;//good
+			controls->MemRead=0;//good
 			controls->MemtoReg=2;
-			controls->ALUOp=0;
-			controls->MemWrite =2;
-			controls->ALUSrc=2;
-			controls->RegWrite=2;
+			controls->ALUOp=0;//good
+			controls->MemWrite =0;//good
+			controls->ALUSrc=2;//good
+			controls->RegWrite=0;//good
 			return 0;
 
 		}
@@ -220,20 +194,17 @@ int instruction_decode(unsigned op,struct_controls *controls)
 			{
 				//slti signed
 				controls->ALUOp=0b010;
-				controls->RegWrite=0;
 				return 0;
 			}
 			else if(lastThree == 3)
 			{
 				//slti unsigned
 				controls->ALUOp=0b011;
-				controls->RegWrite=0;
 				return 0;
 			}
 			//this needs work
 			else if(lastThree == 7)
 			{
-				//load upper immediate TODO
 				controls->ALUOp=0b110;
 				return 0;
 			}
@@ -286,7 +257,7 @@ void read_register(unsigned r1,unsigned r2,unsigned *Reg,unsigned *data1,unsigne
 //TODO: check if working
 void sign_extend(unsigned offset,unsigned *extended_value)
 {
-	if((offset & 0b00000000000000001000000000000000)>>15)//so if the sign bit is one this will run, otherwise no go
+	if((offset & 0b00000000000000001000000000000000)>>15 == 0b1)//so if the sign bit is one this will run, otherwise no go
 	{
 		*extended_value = offset | 0b11111111111111110000000000000000;
 	}
@@ -326,11 +297,12 @@ int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigne
 		}
 		else if(upperHalf == 0b101){
 			if(lowerHalf == 0b010){
-					//sub
+					//slt
+					fprintf(stdout,"IN SLT \n");
 					ALUOp = 0b010;
 				}
 			if(lowerHalf == 0b011){
-					//sub
+					//sltu
 					ALUOp = 0b011;
 				}
 		}
@@ -338,8 +310,10 @@ int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigne
 			return 1;
 		}
 	}
-	//TODO: missing one thing, a check whether im using extended or data
+	
 	if(ALUSrc == 0b0){
+		//r
+		fprintf(stdout,"READ AS R TYPE \n");
 		ALU(data1,data2,ALUOp,ALUresult,Zero);
 	}
 	else if(ALUSrc == 0b1){
@@ -355,19 +329,18 @@ int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigne
 
 /* Read / Write Memory */
 /* 10 Points */
-//TODO:sw not working, has to be coming from here. FIX THIS
 int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsigned *memdata,unsigned *Mem)
 {
-	if(data2%4!=0 && (MemWrite||MemRead)){
+	if(ALUresult%4!=0 && (MemWrite||MemRead)){
 		return 0b1;
 	}
 
 	if(MemWrite==0b1){
-			Mem[data2/4]=ALUresult;
+			Mem[ALUresult/4]=data2;
 			fprintf(stdout,"mem at sw %d\n",Mem[data2/4]);
 	}
 	else if(MemRead==0b1){
-			*memdata=Mem[data2/4];
+			*memdata=Mem[ALUresult/4];
 	}
 
 	return 0;
@@ -379,11 +352,11 @@ int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsig
 //TODO: RED COMMENT IN FUNC
 void write_register(unsigned r2,unsigned r3,unsigned memdata,unsigned ALUresult,char RegWrite,char RegDst,char MemtoReg,unsigned *Reg)
 {
-	if(RegWrite == 0){
+	if(RegWrite == 0b0){
 			return;
 	}
 	else{
-		if(MemtoReg == 1){
+		if(MemtoReg == 0b1){
 			//lw
 			Reg[r2] = memdata;
 		}
@@ -409,13 +382,14 @@ void PC_update(unsigned jsec,unsigned extended_value,char Branch,char Jump,char 
 	
 	*PC = *PC+4;
 
-	if(Branch){
-		if(!Zero){
-			*PC = *PC +  4*(jsec & 0b00000000001111111111111111);
+	if(Branch == 0b1){
+		if(Zero==0b0){
+			*PC = *PC + (extended_value<<2);
 		}
 	}
-	else if(Jump){//might be wrong idk :C
-			*PC = ((*PC &0b11110000000000000000000000000000)&(jsec<<2));
+	else if(Jump == 0b1){//might be wrong idk :C
+			fprintf(stdout,"we winnin j type \n");
+			*PC = ( (*PC &0b11110000000000000000000000000000) | (jsec<<2));
 	}
 }
 
