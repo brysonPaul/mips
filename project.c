@@ -31,7 +31,6 @@ void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero)
 		{
 			*ALUresult = ~*ALUresult + 1;//back to twos comp
 		}
-		fprintf(stdout,"alu result for addi: %d",*ALUresult);
 	}
 	else if(ALUControl == 1)//TODO: cover overflow
 	{
@@ -105,7 +104,8 @@ void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero)
 		{
 			*Zero = 0;
 		}
-
+	fprintf(stdout,"alu result: %d",*ALUresult);
+	
 }
 
 /* instruction fetch */
@@ -116,9 +116,9 @@ int instruction_fetch(unsigned PC,unsigned *Mem,unsigned *instruction)
 		return 1;//makes halt 1 lolll
 	} 
 	else{
-		instruction = &Mem[MEM(PC)];
-		return 0;
+		*instruction = Mem[PC/4];
 	}
+	return 0;
 
 }
 
@@ -127,16 +127,18 @@ int instruction_fetch(unsigned PC,unsigned *Mem,unsigned *instruction)
 /* 10 Points */
 void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1,unsigned *r2, unsigned *r3, unsigned *funct, unsigned *offset, unsigned *jsec)
 {
-	
+	fprintf(stdout,"inst %d\n",instruction);
 	//my dyslexia kicked in trying to do this by hand :(
 	//but i got through it!!!
-	*op = (instruction & 0b11111100000000000000000000000000)>>26;
+	*op = (instruction & 0b11111100000000000000000000000000)>>26;//c
 	*r1 = (instruction & 0b00000011111000000000000000000000)>>21;
 	*r2 = (instruction & 0b00000000000111110000000000000000)>>16;
 	*r3 = (instruction & 0b00000000000000001111100000000000)>>11;
 	*funct = (instruction & 0b00000000000000000000000000111111);
 	*offset = (instruction & 0b00000000000000001111111111111111);
 	*jsec = (instruction & 0b00000011111111111111111111111111);
+
+	fprintf(stdout,"checking split\nop %d\nr1 %d\nr2 %d\nr3 %d\n funct %d\n offset %d\n jsec %d\n",*op,*r1,*r2,*r3,*funct,*offset, *jsec);
 }
 
 
@@ -146,10 +148,14 @@ void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1,unsi
 //check here for some errors 
 int instruction_decode(unsigned op,struct_controls *controls)
 {
-		unsigned firstThree = op & 000111;
-		unsigned lastThree = (op & 111000) >>3;
+		fprintf(stdout,"in decode %d\n",op);
 
-		if(op == 0){
+		unsigned lastThree = (op & 0b000111);
+		unsigned firstThree = (op & 0b111000) >>3;
+		fprintf(stdout,"fl %d %d\n",lastThree,firstThree);	
+		
+		if(op == 0b0){
+			fprintf(stdout,"r\n");
 			//r type
 			controls->RegDst=1;
 			controls->Jump=0;
@@ -163,7 +169,8 @@ int instruction_decode(unsigned op,struct_controls *controls)
 			return 0;
 		}
 		//TODO: dont think everything is a 2
-		if(firstThree == 0 && lastThree == 2){
+		else if(firstThree == 0 && lastThree == 2){
+			fprintf(stdout,"j\n");
 			//jump
 			controls->RegDst=2;
 			controls->Jump= 1;
@@ -177,7 +184,8 @@ int instruction_decode(unsigned op,struct_controls *controls)
 			return 0;
 
 		}
-		if(firstThree == 0 && lastThree == 4){
+		else if(firstThree == 0 && lastThree == 4){
+			fprintf(stdout,"beq\n");
 			//beq
 			controls->RegDst=2;
 			controls->Jump= 0;
@@ -190,8 +198,9 @@ int instruction_decode(unsigned op,struct_controls *controls)
 			controls->RegWrite=0;
 			return 0;
 		}
-		if(firstThree == 1){
+		else if(firstThree == 1){
 			//i type
+		fprintf(stdout,"i type!");	
 			controls->RegDst=0;
 			controls->Jump= 0;
 			controls->Branch=0;
@@ -201,8 +210,9 @@ int instruction_decode(unsigned op,struct_controls *controls)
 			controls->ALUSrc=1;
 			controls->RegWrite=1;
 
-			if(lastThree == 0){
+			if(lastThree == 0b0){
 				//addi
+					fprintf(stdout,"addi");	
 				controls->ALUOp=0;
 				return 0;
 			}
@@ -230,8 +240,9 @@ int instruction_decode(unsigned op,struct_controls *controls)
 			
 		}
 		
-		if(firstThree == 4 && lastThree == 3){
+		else if(firstThree == 4 && lastThree == 3){
 			//lw
+			fprintf(stdout,"lw\n");
 			controls->RegDst=0;
 			controls->Jump= 0;
 			controls->Branch=0;
@@ -243,8 +254,9 @@ int instruction_decode(unsigned op,struct_controls *controls)
 			controls->RegWrite=1;
 			return 0;
 		}
-		if(firstThree == 5 && lastThree == 3){
+		else if(firstThree == 5 && lastThree == 3){
 			//sw
+			fprintf(stdout,"sw\n");
 			controls->RegDst=1;
 			controls->Jump= 0;
 			controls->Branch=0;
@@ -264,8 +276,8 @@ int instruction_decode(unsigned op,struct_controls *controls)
 //TODO: check is working
 void read_register(unsigned r1,unsigned r2,unsigned *Reg,unsigned *data1,unsigned *data2)
 {
-	data1 = &Reg[r1];
-	data2 = &Reg[r2];
+	*data1 = Reg[r1];
+	*data2 = Reg[r2];
 }
 
 
@@ -274,10 +286,14 @@ void read_register(unsigned r1,unsigned r2,unsigned *Reg,unsigned *data1,unsigne
 //TODO: check if working
 void sign_extend(unsigned offset,unsigned *extended_value)
 {
-	if((*extended_value & 0b00000000000000001000000000000000)>>15)//so if the sign bit is one this will run, otherwise no go
+	if((offset & 0b00000000000000001000000000000000)>>15)//so if the sign bit is one this will run, otherwise no go
 	{
-		*extended_value = *extended_value | 0b11111111111111110000000000000000;
+		*extended_value = offset | 0b11111111111111110000000000000000;
 	}
+	else{
+		*extended_value = offset;
+	}
+	fprintf(stdout,"e val  %d \n",*extended_value);	
 }
 
 /* ALU operations */
@@ -339,27 +355,28 @@ int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigne
 
 /* Read / Write Memory */
 /* 10 Points */
-//TODO: READ WHAT PROF SAID TO YOU
+//TODO:sw not working, has to be coming from here. FIX THIS
 int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsigned *memdata,unsigned *Mem)
 {
-	if(*Mem%4!=0 && (MemWrite||MemRead)){
+	if(data2%4!=0 && (MemWrite||MemRead)){
 		return 0b1;
 	}
 
 	if(MemWrite==0b1){
-		Mem[0]=data2;//might be wrong, ask prof
+			Mem[data2/4]=ALUresult;
+			fprintf(stdout,"mem at sw %d\n",Mem[data2/4]);
 	}
-	if(MemRead==0b1){
-		*memdata = MEM(*Mem);
-		
+	else if(MemRead==0b1){
+			*memdata=Mem[data2/4];
 	}
+
 	return 0;
 }
 
 
 /* Write Register */
 /* 10 Points */
-//TODO: READ WHAT PROF SAID TO YOU
+//TODO: RED COMMENT IN FUNC
 void write_register(unsigned r2,unsigned r3,unsigned memdata,unsigned ALUresult,char RegWrite,char RegDst,char MemtoReg,unsigned *Reg)
 {
 	if(RegWrite == 0){
@@ -367,29 +384,38 @@ void write_register(unsigned r2,unsigned r3,unsigned memdata,unsigned ALUresult,
 	}
 	else{
 		if(MemtoReg == 1){
-			Reg[RegDst] = memdata;
+			//lw
+			Reg[r2] = memdata;
 		}
 		else{
-			Reg[RegDst] = ALUresult;
+			if(RegDst == 0 ){
+					fprintf(stdout,"wrote to reg  :))))))))\n");	
+			   	Reg[r2] = ALUresult;
+			}
+			else{
+					fprintf(stdout,"wrote to reg  r\n");	
+					Reg[r3] = ALUresult;
+			}
+			
 		}
 	}
 }
 
 /* PC update */
 /* 10 Points */
-//TODO: CHECK WHAT PROF SAID TO YOU :))
+//TODO: NOT WORKING PROPERLY
 void PC_update(unsigned jsec,unsigned extended_value,char Branch,char Jump,char Zero,unsigned *PC)
 {
 	
-	PC +=4;
+	*PC = *PC+4;
 
 	if(Branch){
 		if(!Zero){
-			PC += 4 * (jsec & 0b00000000001111111111111111);
+			*PC = *PC +  4*(jsec & 0b00000000001111111111111111);
 		}
 	}
-	if(Jump){//might be wrong idk :C
-			PC += (*PC & 0b11110000000000000000000000000000)&(jsec<<2);
+	else if(Jump){//might be wrong idk :C
+			*PC = ((*PC &0b11110000000000000000000000000000)&(jsec<<2));
 	}
 }
 
