@@ -106,33 +106,28 @@ void DisplayControlSignals(void)
 
 void Step(void)
 {
-		fprintf(stdout,"start\n");
 	/* fetch instruction from memory */
 	Halt = instruction_fetch(PC,Mem,&instruction);
-	fprintf(stdout,"passed IF %d\n",instruction);
+
 	if(!Halt)
 	{
 		/* partition the instruction */
 		instruction_partition(instruction,&op,&r1,&r2,&r3,&funct,&offset,&jsec);
-			fprintf(stdout,"passed partition %d\n", Halt);
+
 		/* instruction decode */
 		Halt = instruction_decode(op,&controls);
-			fprintf(stdout,"passed decode %d\n", Halt);
 	}
 
 	if(!Halt)
 	{
 		/* read_register */
 		read_register(r1,r2,Reg,&data1,&data2);
-		fprintf(stdout,"read reg passed %d\n", Halt);
 
 		/* sign_extend */
 		sign_extend(offset,&extended_value);
-		fprintf(stdout,"se passed %d\n", Halt);
 
 		/* ALU */
 		Halt = ALU_operations(data1,data2,extended_value,funct,controls.ALUOp,controls.ALUSrc,&ALUresult,&Zero);
-		fprintf(stdout,"ALUOp passed %d\n", Halt);
 	}
 
 	if(!Halt)

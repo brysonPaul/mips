@@ -1,84 +1,82 @@
 #include "spimcore.h"
 /*
-NOTES TO ME
-1. cover addition and subtraction overflow
-2. make all numbers in binary
-3. remove all prints
+Bryson Paul  || 11.13.2021 || Professor Sarah Angell || CDA3013C
+Thank you so much for grading my code!
 */
-
 /* ALU */
 /* 10 Points */
 void ALU(unsigned A,unsigned B,char ALUControl,unsigned *ALUresult,char *Zero)
 {
-	if(ALUControl == 0)//TODO: need to cover overflow :)
+	//fprintf(stdout, "A and B are: %d  %d ",A,B);
+	if(ALUControl == 0b0)
 	{
 		unsigned aHold = A;
 		unsigned bHold = B;
 		*ALUresult = (aHold + bHold);
 	}
-	else if(ALUControl == 1)//TODO: cover overflow
+	else if(ALUControl == 0b1)
 	{
 		unsigned aHold = A;
 		unsigned bHold = B;
 		*ALUresult = (aHold - bHold);
 	}
-	else if(ALUControl == 2)//signed version as the values come in ALREADY SIGNED
+	else if(ALUControl == 0b10)//signed version as the values come in ALREADY SIGNED
 	{
 			int hold = A-B;
 			if(hold<0){
-				*ALUresult = 1;
+				*ALUresult = 0b1;
 			}
-			else *ALUresult = 0;
+			else *ALUresult = 0b0;
 	}
-	else if(ALUControl == 3)//unsigned version, takes a signed val and takes it out of twos comp
+	else if(ALUControl == 0b11)//unsigned version, takes a signed val and takes it out of twos comp
 	{
-		fprintf(stdout,"IN SLT IN ALU \n");
+		//fprintf(stdout,"IN SLTU IN ALU \n");
 		unsigned aHold = A;
 		unsigned bHold = B;
 
-		fprintf(stdout,"a and b: %d\t%d\n",aHold,bHold);
+		//fprintf(stdout,"a and b: %d\t%d\n",aHold,bHold);
 		if((aHold & 0b10000000000000000000000000000000)>>31 == 0b1)
 		{
-			aHold = ~aHold + 1;
-			fprintf(stdout,"a: %d\n",aHold);
+			aHold = ~(aHold) + 0b1;
+		//	fprintf(stdout,"a: %d\n",aHold);
 		}
 		if((bHold & 0b10000000000000000000000000000000)>>31 == 0b1)
 		{
-			bHold = ~bHold + 1;
-			fprintf(stdout,"b: %d\n",bHold);
+			bHold = ~(bHold) + 0b1;
+			//fprintf(stdout,"b: %d\n",bHold);
 		}
 			int hold = aHold-bHold;
-			if(hold<0){
-				*ALUresult = 1;
+			if(hold < 0){
+				*ALUresult = 0b1;
 			}
-			else *ALUresult = 0;
+			else *ALUresult = 0b0;
 	}
-	else if(ALUControl == 4)
+	else if(ALUControl == 0b100)
 	{
 			*ALUresult = A & B;
 	}
-	else if(ALUControl == 5)
+	else if(ALUControl == 0b101)
 	{
 			*ALUresult = A | B;
 	}
-	else if(ALUControl == 6)
+	else if(ALUControl == 0b110)
 	{
 			*ALUresult = B<<16;
 	}
-	else if(ALUControl == 7)
+	else if(ALUControl == 0b111)
 	{
 			*ALUresult = ~A;
 	}		
 
-	if(ALUresult == 0)
+	if(ALUresult == 0b0)
 		{
-				*Zero = 1;
+				*Zero = 0b1;
 		}
 		else
 		{
-			*Zero = 0;
+			*Zero = 0b0;
 		}
-	fprintf(stdout,"alu result: %d",*ALUresult);
+//	fprintf(stdout,"alu result: %d",*ALUresult);
 	
 }
 
@@ -101,7 +99,7 @@ int instruction_fetch(unsigned PC,unsigned *Mem,unsigned *instruction)
 /* 10 Points */
 void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1,unsigned *r2, unsigned *r3, unsigned *funct, unsigned *offset, unsigned *jsec)
 {
-	fprintf(stdout,"inst %d\n",instruction);
+//	fprintf(stdout,"inst %d\n",instruction);
 	//my dyslexia kicked in trying to do this by hand :(
 	//but i got through it!!!
 	*op = (instruction & 0b11111100000000000000000000000000)>>26;//c
@@ -112,7 +110,7 @@ void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1,unsi
 	*offset = (instruction & 0b00000000000000001111111111111111);
 	*jsec = (instruction & 0b00000011111111111111111111111111);
 
-	fprintf(stdout,"checking split\nop %d\nr1 %d\nr2 %d\nr3 %d\n funct %d\n offset %d\n jsec %d\n",*op,*r1,*r2,*r3,*funct,*offset, *jsec);
+//	fprintf(stdout,"checking split\nop %d\nr1 %d\nr2 %d\nr3 %d\n funct %d\n offset %d\n jsec %d\n",*op,*r1,*r2,*r3,*funct,*offset, *jsec);
 }
 
 
@@ -122,121 +120,121 @@ void instruction_partition(unsigned instruction, unsigned *op, unsigned *r1,unsi
 //check here for some errors 
 int instruction_decode(unsigned op,struct_controls *controls)
 {
-		fprintf(stdout,"in decode %d\n",op);
+		//fprintf(stdout,"in decode %d\n",op);
 
 		unsigned lastThree = (op & 0b000111);
 		unsigned firstThree = (op & 0b111000) >>3;
-		fprintf(stdout,"fl %d %d\n",lastThree,firstThree);	
+		//fprintf(stdout,"fl %d %d\n",lastThree,firstThree);	
 		
 		if(op == 0b0){
-			fprintf(stdout,"r\n");
+		//	fprintf(stdout,"r\n");
 			//r type
-			controls->RegDst=1;
-			controls->Jump=0;
-			controls->Branch=0;
-			controls->MemRead=0;
-			controls->MemtoReg=0;
-			controls->ALUOp=0b111;
-			controls->MemWrite =0;
-			controls->ALUSrc=0;
-			controls->RegWrite=1;
+			controls->RegDst = 0b1;
+			controls->Jump = 0b0;
+			controls->Branch = 0b0;
+			controls->MemRead = 0b0;
+			controls->MemtoReg = 0b0;
+			controls->ALUOp = 0b111;
+			controls->MemWrite = 0b0;
+			controls->ALUSrc = 0b0;
+			controls->RegWrite = 0b1;
 			return 0;
 		}
 		//TODO: dont think everything is a 2
-		else if(firstThree == 0 && lastThree == 2){
-			fprintf(stdout,"j\n");
+		else if(firstThree == 0b0 && lastThree == 0b10){
+		//	fprintf(stdout,"j\n");
 			//jump
-			controls->RegDst=2;//ood
-			controls->Jump= 1;//good
-			controls->Branch=0;//good
-			controls->MemRead=0;//good
-			controls->MemtoReg=2;
-			controls->ALUOp=0;//good
-			controls->MemWrite =0;//good
-			controls->ALUSrc=2;//good
-			controls->RegWrite=0;//good
+			controls->RegDst = 0b10;//ood
+			controls->Jump = 0b1;//good
+			controls->Branch = 0b0;//good
+			controls->MemRead = 0b0;//good
+			controls->MemtoReg = 0b10;
+			controls->ALUOp = 0b0;//good
+			controls->MemWrite = 0b0;//good
+			controls->ALUSrc = 0b10;//good
+			controls->RegWrite = 0b0;//good
 			return 0;
 
 		}
-		else if(firstThree == 0 && lastThree == 4){
-			fprintf(stdout,"beq\n");
+		else if(firstThree == 0b0 && lastThree == 0b100){
+			//fprintf(stdout,"beq\n");
 			//beq
-			controls->RegDst=2;
-			controls->Jump= 0;
-			controls->Branch=1;
-			controls->MemRead=0;
-			controls->MemtoReg=2;
-			controls->ALUOp=0;//means dont care
-			controls->MemWrite =0;
-			controls->ALUSrc=0;
-			controls->RegWrite=0;
+			controls->RegDst = 0b10;
+			controls->Jump = 0b0;
+			controls->Branch = 0b1;
+			controls->MemRead = 0b0;
+			controls->MemtoReg = 0b10;
+			controls->ALUOp = 0b0;
+			controls->MemWrite = 0b0;
+			controls->ALUSrc = 0b0;
+			controls->RegWrite = 0b0;
 			return 0;
 		}
 		else if(firstThree == 1){
 			//i type
-		fprintf(stdout,"i type!");	
-			controls->RegDst=0;
-			controls->Jump= 0;
-			controls->Branch=0;
-			controls->MemRead=0;
-			controls->MemtoReg=0;
-			controls->MemWrite =0;
-			controls->ALUSrc=1;
-			controls->RegWrite=1;
+		//fprintf(stdout,"i type!");	
+			controls->RegDst = 0b0;
+			controls->Jump = 0b0;
+			controls->Branch = 0b0;
+			controls->MemRead = 0b0;
+			controls->MemtoReg = 0b0;
+			controls->MemWrite = 0b0;
+			controls->ALUSrc = 0b1;
+			controls->RegWrite = 0b1;
 
 			if(lastThree == 0b0){
 				//addi
-					fprintf(stdout,"addi");	
-				controls->ALUOp=0;
+				//fprintf(stdout,"addi");	
+				controls->ALUOp = 0b0;
 				return 0;
 			}
-			else if(lastThree == 2)
+			else if(lastThree == 0b10)
 			{
 				//slti signed
-				controls->ALUOp=0b010;
+				controls->ALUOp = 0b010;
 				return 0;
 			}
-			else if(lastThree == 3)
+			else if(lastThree == 0b11)
 			{
 				//slti unsigned
-				controls->ALUOp=0b011;
+				controls->ALUOp = 0b011;
 				return 0;
 			}
 			//this needs work
-			else if(lastThree == 7)
+			else if(lastThree == 0b111)
 			{
-				controls->ALUOp=0b110;
+				controls->ALUOp = 0b110;
 				return 0;
 			}
 			
 		}
 		
-		else if(firstThree == 4 && lastThree == 3){
+		else if(firstThree == 0b100 && lastThree == 0b011){
 			//lw
-			fprintf(stdout,"lw\n");
-			controls->RegDst=0;
-			controls->Jump= 0;
-			controls->Branch=0;
-			controls->MemRead=1;
-			controls->MemtoReg=1;
-			controls->ALUOp=0;//lw adds registers
-			controls->MemWrite =0;
-			controls->ALUSrc=1;
-			controls->RegWrite=1;
+			//fprintf(stdout,"lw\n");
+			controls->RegDst = 0b0;
+			controls->Jump = 0b0;
+			controls->Branch = 0b0;
+			controls->MemRead = 0b1;
+			controls->MemtoReg = 0b1;
+			controls->ALUOp = 0b0;//lw adds registers
+			controls->MemWrite = 0b0;
+			controls->ALUSrc = 0b1;
+			controls->RegWrite = 0b1;
 			return 0;
 		}
-		else if(firstThree == 5 && lastThree == 3){
+		else if(firstThree == 0b101 && lastThree == 0b011){
 			//sw
-			fprintf(stdout,"sw\n");
-			controls->RegDst=1;
-			controls->Jump= 0;
-			controls->Branch=0;
-			controls->MemRead=0;
-			controls->MemtoReg=0;
-			controls->ALUOp=0;
-			controls->MemWrite =1;
-			controls->ALUSrc=1;
-			controls->RegWrite=0;
+			//fprintf(stdout,"sw\n");
+			controls->RegDst = 0b1;
+			controls->Jump = 0;
+			controls->Branch = 0b0;
+			controls->MemRead = 0b0;
+			controls->MemtoReg = 0b0;
+			controls->ALUOp = 0b0;
+			controls->MemWrite = 0b1;
+			controls->ALUSrc = 0b1;
+			controls->RegWrite = 0b0;
 			return 0;
 		}
 		return 1;
@@ -264,16 +262,16 @@ void sign_extend(unsigned offset,unsigned *extended_value)
 	else{
 		*extended_value = offset;
 	}
-	fprintf(stdout,"e val  %d \n",*extended_value);	
+//	fprintf(stdout,"e val  %d \n",*extended_value);	
 }
 
 /* ALU operations */
 /* 10 Points */
 int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigned funct,char ALUOp,char ALUSrc,unsigned *ALUresult,char *Zero)
 {
-	if(ALUOp==0b111){
+	if(ALUOp == 0b111){
 		//its an r type
-		unsigned upperHalf = (funct & 0b111000)>>3;
+		unsigned upperHalf = (funct & 0b111000) >> 3;
 		unsigned lowerHalf = funct & 0b000111;
 
 		if(upperHalf == 0b100){
@@ -298,7 +296,7 @@ int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigne
 		else if(upperHalf == 0b101){
 			if(lowerHalf == 0b010){
 					//slt
-					fprintf(stdout,"IN SLT \n");
+					//fprintf(stdout,"IN SLT \n");
 					ALUOp = 0b010;
 				}
 			if(lowerHalf == 0b011){
@@ -313,7 +311,7 @@ int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigne
 	
 	if(ALUSrc == 0b0){
 		//r
-		fprintf(stdout,"READ AS R TYPE \n");
+	//fprintf(stdout,"READ AS R TYPE \n");
 		ALU(data1,data2,ALUOp,ALUresult,Zero);
 	}
 	else if(ALUSrc == 0b1){
@@ -331,15 +329,15 @@ int ALU_operations(unsigned data1,unsigned data2,unsigned extended_value,unsigne
 /* 10 Points */
 int rw_memory(unsigned ALUresult,unsigned data2,char MemWrite,char MemRead,unsigned *memdata,unsigned *Mem)
 {
-	if(ALUresult%4!=0 && (MemWrite||MemRead)){
+	if(ALUresult % 4 != 0b0 && (MemWrite || MemRead)){
 		return 0b1;
 	}
 
-	if(MemWrite==0b1){
-			Mem[ALUresult/4]=data2;
-			fprintf(stdout,"mem at sw %d\n",Mem[data2/4]);
+	if(MemWrite == 0b1){
+			Mem[ALUresult/4] = data2;
+		//	fprintf(stdout,"mem at sw %d\n",Mem[data2/4]);
 	}
-	else if(MemRead==0b1){
+	else if(MemRead == 0b1){
 			*memdata=Mem[ALUresult/4];
 	}
 
@@ -361,12 +359,12 @@ void write_register(unsigned r2,unsigned r3,unsigned memdata,unsigned ALUresult,
 			Reg[r2] = memdata;
 		}
 		else{
-			if(RegDst == 0 ){
-					fprintf(stdout,"wrote to reg  :))))))))\n");	
+			if(RegDst ==  0b0){
+				//	fprintf(stdout,"wrote to reg  :))))))))\n");	
 			   	Reg[r2] = ALUresult;
 			}
 			else{
-					fprintf(stdout,"wrote to reg  r\n");	
+			//		fprintf(stdout,"wrote to reg  r\n");	
 					Reg[r3] = ALUresult;
 			}
 			
@@ -380,15 +378,15 @@ void write_register(unsigned r2,unsigned r3,unsigned memdata,unsigned ALUresult,
 void PC_update(unsigned jsec,unsigned extended_value,char Branch,char Jump,char Zero,unsigned *PC)
 {
 	
-	*PC = *PC+4;
+	*PC = *PC + 4;
 
 	if(Branch == 0b1){
-		if(Zero==0b0){
+		if(Zero == 0b0){
 			*PC = *PC + (extended_value<<2);
 		}
 	}
 	else if(Jump == 0b1){//might be wrong idk :C
-			fprintf(stdout,"we winnin j type \n");
+		//	fprintf(stdout,"we winnin j type \n");
 			*PC = ( (*PC &0b11110000000000000000000000000000) | (jsec<<2));
 	}
 }
